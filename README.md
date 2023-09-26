@@ -3,8 +3,8 @@ A strategy guide and community data collection project for popular fighting game
 
 ## License (GPL 3)
 ```
-FGCD - Strategy guide & community data collection project for popular fighting games.
-Copyright (C) 2023 else.club, a division of Asmov LLC <development.pub@asmov.software>
+FGCD: Strategy guide & data collection for fighting games
+Copyright (C) 2023 else.club, a division of Asmov LLC
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
