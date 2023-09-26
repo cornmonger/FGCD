@@ -18,8 +18,9 @@
 ##
 set -aepu -o pipefail ; shopt -s extglob
 
-PROJECT_DIR="$(realpath $(dirname "$0"))"
 SCRIPT_NAME="$(basename "$0")"
+PROJECT_DIR="$(realpath $(dirname "$0")/..)"
+MONO_PROJECT_DIR="$(realpath $(dirname "$0")/../..)"
 
 LIBREOFFICE="$(which libreoffice)"
 
