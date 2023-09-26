@@ -24,20 +24,46 @@ MONO_PROJECT_DIR="$(realpath $(dirname "$0")/../..)"
 
 LIBREOFFICE="$(which libreoffice)"
 
-DATA_DIR="$PROJECT_DIR/data"
 TARGET_DIR="$PROJECT_DIR/target"
 
-GAME_DATA_DIR="$DATA_DIR/games"
+GAME_DATA_DIR="$PROJECT_DIR/games"
 DATA_TARGET_DIR="$TARGET_DIR/data"
 
 GAME_DATA_TARGET_DIR="$DATA_TARGET_DIR/games"
 
-MORTAL_KOMBAT_1_DATA_DIR="$GAME_DATA_DIR/mortal_kombat_1"
-MORTAL_KOMBAT_1_DATA_TARGET_DIR="$GAME_DATA_TARGET_DIR/mortal_kombat_1"
-
-compile() {
-    $LIBREOFFICE --headless --convert-to ods "$MORTAL_KOMBAT_1_DATA_DIR/*.fods" --outdir "$MORTAL_KOMBAT_1_DATA_TARGET_DIR"
+##
+# Cleans the data target dir
+clean() {
+    rm -rf "$DATA_TARGET_DIR"
 }
 
-compile
+##
+# Creates the data target dir structure
+setup() {
+    mkdir -p "$DATA_TARGET_DIR"
+}
 
+##
+# Uses libreoffice to convert the flat-file FODS files into zipped ODS files.
+compile() {
+    cd "$GAME_DATA_DIR"
+
+    for dir in $(ls -d $GAME_DATA_DIR/*/); do
+        local game_dir_name game_data_dir game_data_target_dir
+        game_dir_name="$(basename "$dir")"
+        game_data_dir="$GAME_DATA_DIR/$game_dir_name"
+        game_data_target_dir="$GAME_DATA_TARGET_DIR/$game_dir_name"
+
+        cd "$game_data_dir"
+        mkdir -p "$game_data_target_dir"
+        $LIBREOFFICE --convert-to ods *.fods --outdir "$game_data_target_dir"
+    done
+}
+
+main() {
+    clean
+    setup 
+    compile
+}
+
+main
