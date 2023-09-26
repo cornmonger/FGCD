@@ -25,11 +25,14 @@ MONO_PROJECT_DIR="$(realpath $(dirname "$0")/../..)"
 LIBREOFFICE="$(which libreoffice)"
 
 TARGET_DIR="$PROJECT_DIR/target"
-
 GAME_DATA_DIR="$PROJECT_DIR/games"
+PLATFORM_DATA_DIR="$PROJECT_DIR/platforms"
+
 DATA_TARGET_DIR="$TARGET_DIR/data"
 
 GAME_DATA_TARGET_DIR="$DATA_TARGET_DIR/games"
+PLATFORM_DATA_TARGET_DIR="$DATA_TARGET_DIR/platforms"
+
 
 ##
 # Cleans the data target dir
@@ -44,19 +47,28 @@ setup() {
 }
 
 ##
-# Uses libreoffice to convert the flat-file FODS files into zipped ODS files.
+# Compiles data files
 compile() {
-    cd "$GAME_DATA_DIR"
+    compile_dir "$GAME_DATA_DIR" "$GAME_DATA_TARGET_DIR"
+    compile_dir "$PLATFORM_DATA_DIR" "$PLATFORM_DATA_TARGET_DIR"
+}
 
-    for dir in $(ls -d $GAME_DATA_DIR/*/); do
-        local game_dir_name game_data_dir game_data_target_dir
-        game_dir_name="$(basename "$dir")"
-        game_data_dir="$GAME_DATA_DIR/$game_dir_name"
-        game_data_target_dir="$GAME_DATA_TARGET_DIR/$game_dir_name"
+##
+# Uses libreoffice to convert the flat-file FODS files into zipped ODS files.
+compile_dir() {
+    local data_dir target_dir
+    data_dir="$1"
+    target_dir="$2"
 
-        cd "$game_data_dir"
-        mkdir -p "$game_data_target_dir"
-        $LIBREOFFICE --convert-to ods *.fods --outdir "$game_data_target_dir"
+    for dir in $(ls -d $data_dir/*/); do
+        local dir_name data_item_dir target_item_dir
+        dir_name="$(basename "$dir")"
+        data_item_dir="$data_dir/$dir_name"
+        target_item_dir="$target_dir/$dir_name"
+
+        cd "$data_item_dir"
+        mkdir -p "$target_item_dir"
+        $LIBREOFFICE --convert-to ods *.fods --outdir "$target_item_dir"
     done
 }
 
