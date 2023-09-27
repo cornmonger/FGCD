@@ -175,3 +175,7 @@ where
     let game = bincode::deserialize_from(bufreader).unwrap();
     game
 }
+
+pub fn read_game_bytes(bytes: &[u8]) -> model::game::Game {
+    bincode::deserialize(bytes).unwrap()
+}
