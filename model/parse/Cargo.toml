@@ -1,0 +1,9 @@
+[package]
+name = "fgcd-parse"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+derive_more = "0.99.17"
+fgcd-model = { version = "0.1.0", path = "../model" }
+spreadsheet-ods = "0.17.0"
