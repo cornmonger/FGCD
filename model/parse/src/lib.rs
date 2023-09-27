@@ -1,10 +1,7 @@
-extern crate derive_more;
-use derive_more::Display;
+use std::{path::Path, io::{BufWriter, BufReader}, fs::File};
 use spreadsheet_ods;
-use std::{path::Path};
-use fgcd_model;
-
-const GAME_SHEET_NAMES: [&str;4] = [ "Profile", "Inputs", "Move Context", "Move Types" ];
+use bincode;
+use fgcd_model as model;
 
 struct Spreadsheet {
     name: &'static str,
@@ -24,7 +21,7 @@ enum SheetOrientation {
 
 struct SheetHeading {
     name: &'static str,
-    position: (u32, u32)
+    rowcol: RowCol
 }
 
 enum GameSheets {
@@ -67,8 +64,20 @@ enum GameProfileHeadings {
     Platforms
 }
 
+pub struct RowCol(u32, u32);
+
+impl RowCol {
+    pub const fn row(&self) -> u32 {
+        self.0
+    }
+
+    pub const fn column(&self) -> u32 {
+        self.1
+    }
+}
+
 impl GameProfileHeadings {
-    const fn name(&self) -> &'static str {
+    pub const fn name(&self) -> &'static str {
         match *self {
             GameProfileHeadings::Name => "Name",
             GameProfileHeadings::Developer => "Developer",
@@ -80,19 +89,25 @@ impl GameProfileHeadings {
         }
     }
 
-    const fn position(&self) -> (u32,u32) {
+    pub const fn rowcol(&self) -> RowCol {
         match *self {
-            GameProfileHeadings::Name           => (0,0),
-            GameProfileHeadings::Developer      => (1,0),
-            GameProfileHeadings::Publisher      => (2,0),
-            GameProfileHeadings::ReleaseDate    => (3,0),
-            GameProfileHeadings::Website        => (4,0),
-            GameProfileHeadings::Wikipedia      => (5,0),
-            GameProfileHeadings::Platforms      => (6,0) 
+            GameProfileHeadings::Name           => RowCol(0,0),
+            GameProfileHeadings::Developer      => RowCol(1,0),
+            GameProfileHeadings::Publisher      => RowCol(2,0),
+            GameProfileHeadings::ReleaseDate    => RowCol(3,0),
+            GameProfileHeadings::Website        => RowCol(4,0),
+            GameProfileHeadings::Wikipedia      => RowCol(5,0),
+            GameProfileHeadings::Platforms      => RowCol(6,0) 
         }
     }
 
+    pub const fn row(&self) -> u32 {
+        self.rowcol().row()
+    }
 
+    pub const fn column(&self) -> u32 {
+        self.rowcol().column()
+    }
 }
 
 
@@ -100,36 +115,63 @@ const GAME_SPREADSHEET: Spreadsheet = Spreadsheet {
     name: Spreadsheets::Game.name(),
     sheets: &[
         Sheet { name: GameSheets::Profile.name(), orientation: SheetOrientation::Horizontal, headings: &[
-            SheetHeading { name: GameProfileHeadings::Name.name(), position: GameProfileHeadings::Name.position() },
-            SheetHeading { name: GameProfileHeadings::Developer.name(), position: GameProfileHeadings::Developer.position() },
-            SheetHeading { name: GameProfileHeadings::Publisher.name(), position: GameProfileHeadings::Publisher.position() },
-            SheetHeading { name: GameProfileHeadings::ReleaseDate.name(), position: GameProfileHeadings::ReleaseDate.position()},
-            SheetHeading { name: GameProfileHeadings::Website.name(), position: GameProfileHeadings::Website.position() },
-            SheetHeading { name: GameProfileHeadings::Wikipedia.name(), position: GameProfileHeadings::Wikipedia.position() },
-            SheetHeading { name: GameProfileHeadings::Platforms.name(), position: GameProfileHeadings::Platforms.position() },
+            SheetHeading { name: GameProfileHeadings::Name.name(), rowcol: GameProfileHeadings::Name.rowcol() },
+            SheetHeading { name: GameProfileHeadings::Developer.name(), rowcol: GameProfileHeadings::Developer.rowcol() },
+            SheetHeading { name: GameProfileHeadings::Publisher.name(), rowcol: GameProfileHeadings::Publisher.rowcol() },
+            SheetHeading { name: GameProfileHeadings::ReleaseDate.name(), rowcol: GameProfileHeadings::ReleaseDate.rowcol()},
+            SheetHeading { name: GameProfileHeadings::Website.name(), rowcol: GameProfileHeadings::Website.rowcol() },
+            SheetHeading { name: GameProfileHeadings::Wikipedia.name(), rowcol: GameProfileHeadings::Wikipedia.rowcol() },
+            SheetHeading { name: GameProfileHeadings::Platforms.name(), rowcol: GameProfileHeadings::Platforms.rowcol() },
         ] }
     ]
 };
 
 
 
-pub fn read_game_ods<P>(path: &P)
+pub fn read_game_ods<P>(path: &P) -> model::game::Game
 where
     P: ?Sized + AsRef<Path>
 {
     let workbook = spreadsheet_ods::read_ods(path).unwrap();
     let profile_sheet = workbook.iter_sheets().find(|s| s.name() == GameSheets::Profile.name() ).unwrap();
 
-    let game_profile = fgcd_model::GameProfile {
-        name: profile_sheet.value(GameProfileHeadings::Name.position().0, 1).as_str_opt().unwrap().to_string(),
-        developer: profile_sheet.value(GameProfileHeadings::Developer.position().0, 1).as_str_opt().unwrap().to_string(),
-        publisher: profile_sheet.value(GameProfileHeadings::Publisher.position().0, 1).as_str_opt().unwrap().to_string(),
-        release_date: profile_sheet.value(GameProfileHeadings::ReleaseDate.position().0, 1).as_date_opt().unwrap().to_string(),
-        website_url: profile_sheet.value(GameProfileHeadings::Website.position().0, 1).as_str_opt().unwrap().to_string(),
-        wikipedia_page_url: profile_sheet.value(GameProfileHeadings::Wikipedia.position().0, 1).as_str_opt().unwrap().to_string(),
-        platform_names: profile_sheet.value(GameProfileHeadings::Platforms.position().0, 1).as_str_opt().unwrap().to_string(),
-    };
+    let game_profile = model::game::Profile::new(
+        profile_sheet.value(GameProfileHeadings::Name.row(), 1)
+            .as_str_opt().unwrap().to_string(),
+        profile_sheet.value(GameProfileHeadings::Developer.row(), 1)
+            .as_str_opt().unwrap().to_string(),
+        profile_sheet.value(GameProfileHeadings::Publisher.row(), 1)
+            .as_str_opt().unwrap().to_string(),
+        profile_sheet.value(GameProfileHeadings::ReleaseDate.row(), 1)
+            .as_date_opt().unwrap().to_string(),
+        profile_sheet.value(GameProfileHeadings::Website.row(), 1)
+            .as_str_opt().unwrap().to_string(),
+        profile_sheet.value(GameProfileHeadings::Wikipedia.row(), 1)
+            .as_str_opt().unwrap().to_string(),
+        profile_sheet.value(GameProfileHeadings::Platforms.row(), 1)
+            .as_str_opt().unwrap().to_string()
+            .split(',')
+            .map(|s| s.trim().to_string())
+            .collect()
+    );
 
-    println!("{:#?}", game_profile)
+    let game = model::game::Game::new(game_profile);
+    game
+}
 
+pub fn write_game_bin<P>(game: &model::game::Game, path: &P)
+where
+    P: ?Sized + AsRef<Path>
+{
+    let mut bufwriter = BufWriter::new(File::create(path).unwrap());
+    bincode::serialize_into(&mut bufwriter, &game).unwrap();
+}
+
+pub fn read_game_bin<P>(path: &P) -> model::game::Game
+where
+    P: ?Sized + AsRef<Path>
+{
+    let bufreader = BufReader::new(File::open(path).unwrap());
+    let game = bincode::deserialize_from(bufreader).unwrap();
+    game
 }
