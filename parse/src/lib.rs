@@ -143,7 +143,7 @@ where
         profile_sheet.value(GameProfileHeadings::Publisher.row(), 1)
             .as_str_opt().unwrap().to_string(),
         profile_sheet.value(GameProfileHeadings::ReleaseDate.row(), 1)
-            .as_date_opt().unwrap().to_string(),
+            .as_date_opt().unwrap(),
         profile_sheet.value(GameProfileHeadings::Website.row(), 1)
             .as_str_opt().unwrap().to_string(),
         profile_sheet.value(GameProfileHeadings::Wikipedia.row(), 1)

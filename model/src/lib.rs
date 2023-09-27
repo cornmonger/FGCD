@@ -2,6 +2,7 @@
 pub mod game {
     use super::input;
     use serde;
+    use chrono;
 
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Game {
@@ -15,6 +16,10 @@ pub mod game {
                 profile
             }
         }
+
+        pub fn profile(&self) -> &Profile {
+            &self.profile
+        }
     }
 
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -22,7 +27,7 @@ pub mod game {
         name: String,
         developer: String,
         publisher: String,
-        release_date: String,
+        release_date: chrono::NaiveDate,
         website_url: String,
         wikipedia_page_url: String,
         platform_names: Vec<String>
@@ -33,7 +38,7 @@ pub mod game {
             name: String,
             developer: String,
             publisher: String,
-            release_date: String,
+            release_date: chrono::NaiveDate,
             website_url: String,
             wikipedia_page_url: String,
             platform_names: Vec<String>) -> Self
@@ -47,6 +52,34 @@ pub mod game {
                 wikipedia_page_url,
                 platform_names
             }
+        }
+
+        pub fn name(&self) -> &str {
+            &self.name
+        }
+        
+        pub fn developer(&self) -> &str {
+            &self.developer
+        }
+        
+        pub fn publisher(&self) -> &str {
+            &self.publisher
+        }
+
+        pub fn release_date(&self) -> &chrono::NaiveDate{
+            &self.release_date
+        }
+
+        pub fn website_url(&self) -> &str {
+            &self.website_url
+        }
+
+        pub fn wikipedia_page_url(&self) -> &str {
+            &self.wikipedia_page_url
+        }
+
+        pub fn platform_names(&self) -> &Vec<String> {
+            &self.platform_names
         }
     }
 
