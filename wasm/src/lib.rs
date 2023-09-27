@@ -15,10 +15,7 @@ extern "C" {
     fn alert(s: &str);
 }
 
-#[wasm_bindgen]
-pub async fn greet() -> Result<JsValue, JsValue> {
-    set_panic_hook();
-
+pub async fn fetch_bytes(url: &str) -> Result<Vec<u8>, wasm_bindgen::JsValue> {
     let window = web_sys::window().unwrap();
     let request = web_sys::Request::new_with_str("Game.bin").unwrap();
     let response = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request)).await?;
@@ -26,15 +23,20 @@ pub async fn greet() -> Result<JsValue, JsValue> {
     let response: web_sys::Response = response.dyn_into().unwrap();
 
     let buf_promise = response.array_buffer().unwrap();
-    let buf = wasm_bindgen_futures::JsFuture::from(buf_promise)
-        .await
-        .unwrap();
+    let buf = wasm_bindgen_futures::JsFuture::from(buf_promise).await?;
     assert!(buf.is_instance_of::<js_sys::ArrayBuffer>());
 
     let typebuf: js_sys::Uint8Array = js_sys::Uint8Array::new(&buf);
     let mut bytes = vec![0; typebuf.length() as usize];
     typebuf.copy_to(&mut bytes[..]);
+    Ok(bytes)
+}
 
+#[wasm_bindgen]
+pub async fn read_game() -> Result<JsValue, JsValue> {
+    set_panic_hook();
+
+    let bytes = fetch_bytes("Game.bin").await?;
     let game = fgcd_parse::read_game_bytes(&bytes);
     Ok(serde_wasm_bindgen::to_value(&game)?)
 }
