@@ -37,6 +37,6 @@ pub async fn read_game() -> Result<JsValue, JsValue> {
     set_panic_hook();
 
     let bytes = fetch_bytes("Game.bin").await?;
-    let game = fgcd_parse::read_game_bytes(&bytes);
+    let game = fgcd_parse::binary::game::read_game_bytes(&bytes);
     Ok(serde_wasm_bindgen::to_value(&game)?)
 }
