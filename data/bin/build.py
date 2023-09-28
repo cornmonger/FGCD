@@ -1,10 +1,28 @@
 #!/bin/env python3
+##
+#  FGCD: Strategy guide & data collection for fighting games
+#  Copyright (C) 2023 else.club, a division of Asmov LLC
+#
+#  This program is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+# 
+#  You should have received a copy of the GNU General Public License
+#  along with this program.  If not, see <https://www.gnu.org/licenses/>.
+##
 
 import os;
+import os.path as path;
 import shutil;
 import subprocess;
 
-PROJECT_DIR = os.path.realpath(os.path.dirname(__file__) + '/..')
+PROJECT_DIR = path.realpath(path.dirname(__file__) + '/..')
 
 TARGET_DIR = PROJECT_DIR + '/target'
 GAME_DATA_DIR = PROJECT_DIR + '/games'
@@ -18,11 +36,11 @@ PLATFORM_DATA_TARGET_DIR = DATA_TARGET_DIR + '/platforms'
 LIBREOFFICE = shutil.which('libreoffice')
 
 def clean():
-    if (os.path.exists(DATA_TARGET_DIR)):
+    if (path.exists(DATA_TARGET_DIR)):
         shutil.rmtree(DATA_TARGET_DIR)
 
 def setup():
-    os.makedirs(DATA_TARGET_DIR, 0o755, True)
+    os.makedirs(DATA_TARGET_DIR, 0o755, exist_ok=True)
 
 def compile():
     compile_dir(GAME_DATA_DIR, GAME_DATA_TARGET_DIR)
@@ -30,19 +48,19 @@ def compile():
 
 def compile_dir(data_dir, target_dir):
     for name in os.listdir(data_dir):
-        item_data_dir = os.path.join(data_dir, name)
-        item_target_dir = os.path.join(target_dir, name)
+        item_data_dir = path.join(data_dir, name)
+        item_target_dir = path.join(target_dir, name)
         os.makedirs(item_target_dir, 0o755)
         os.chdir(item_data_dir)
-        print(item_data_dir)
-        result = subprocess.run([LIBREOFFICE, '--convert-to', 'ods', '*.fods', '--outdir', item_target_dir], shell=True)
-        print(result)
-
+        subprocess.run(
+            '"{}" --convert-to ods *.fods --outdir "{}"'
+                .format(LIBREOFFICE, item_target_dir),
+            shell=True, capture_output=True)
 
 def main():
     clean()
     setup()
     compile()
     
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
