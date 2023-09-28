@@ -1,5 +1,5 @@
 use std::{path::Path, io::{BufWriter, BufReader}, fs::File};
-use spreadsheet_ods;
+use spreadsheet_ods::{self, RowRange, ColRange, CellRange};
 use bincode;
 use fgcd_model as model;
 
@@ -26,6 +26,7 @@ struct SheetHeading {
 
 enum GameSheets {
     Profile, 
+    Characters,
     Inputs,
     MoveContext,
     MoveTypes
@@ -35,6 +36,7 @@ impl GameSheets {
     const fn name(&self) -> &'static str {
         match *self {
             GameSheets::Profile => "Profile",
+            GameSheets::Characters => "Characters",
             GameSheets::Inputs => "Inputs",
             GameSheets::MoveContext => "Move Context",
             GameSheets::MoveTypes => "Move Types",
@@ -53,17 +55,6 @@ impl Spreadsheets {
         }
     }
 }
-
-enum GameProfileHeadings {
-    Name,
-    Developer,
-    Publisher,
-    ReleaseDate,
-    Website,
-    Wikipedia,
-    Platforms
-}
-
 pub struct RowCol(u32, u32);
 
 impl RowCol {
@@ -74,6 +65,17 @@ impl RowCol {
     pub const fn column(&self) -> u32 {
         self.1
     }
+}
+
+
+enum GameProfileHeadings {
+    Name,
+    Developer,
+    Publisher,
+    ReleaseDate,
+    Website,
+    Wikipedia,
+    Platforms
 }
 
 impl GameProfileHeadings {
@@ -110,6 +112,31 @@ impl GameProfileHeadings {
     }
 }
 
+enum GameCharacterHeadings {
+    Name
+}
+
+impl GameCharacterHeadings {
+    pub const fn title(&self) -> &'static str {
+        match *self {
+            GameCharacterHeadings::Name => "Name",
+        }
+    }
+
+    pub const fn rowcol(&self) -> RowCol {
+        match *self {
+            GameCharacterHeadings::Name => RowCol(0,0),
+        }
+    }
+
+    pub const fn row(&self) -> u32 {
+        self.rowcol().row()
+    }
+
+    pub const fn column(&self) -> u32 {
+        self.rowcol().column()
+    }
+}
 
 const GAME_SPREADSHEET: Spreadsheet = Spreadsheet {
     name: Spreadsheets::Game.name(),
@@ -135,7 +162,7 @@ where
     let workbook = spreadsheet_ods::read_ods(path).unwrap();
     let profile_sheet = workbook.iter_sheets().find(|s| s.name() == GameSheets::Profile.name() ).unwrap();
 
-    let game_profile = model::game::Profile::new(
+    let profile = model::game::Profile::new(
         profile_sheet.value(GameProfileHeadings::Name.row(), 1)
             .as_str_opt().unwrap().to_string(),
         profile_sheet.value(GameProfileHeadings::Developer.row(), 1)
@@ -155,8 +182,15 @@ where
             .collect()
     );
 
-    let game = model::game::Game::new(game_profile);
-    game
+    let characters_sheet = workbook.iter_sheets().find(|s| s.name() == GameSheets::Characters.name() ).unwrap();
+    let mut character_names: Vec<String> = Vec::with_capacity(characters_sheet.used_rows() as usize);
+    for row in GameCharacterHeadings::Name.row()+1..characters_sheet.used_rows() {
+        let name = characters_sheet.value(row, GameCharacterHeadings::Name.column())
+            .as_str_opt().unwrap();
+        character_names.push(name.to_string());
+    }
+
+    model::game::Game::new(profile, character_names)
 }
 
 pub fn write_game_bin<P>(game: &model::game::Game, path: &P)

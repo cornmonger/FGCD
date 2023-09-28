@@ -7,18 +7,23 @@ pub mod game {
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Game {
         profile: Profile,
-        //characters: Vec<Character>
+        character_names: Vec<String>
     }
 
     impl Game {
-        pub fn new(profile: Profile) -> Self {
+        pub fn new(profile: Profile, character_names: Vec<String>) -> Self {
             Self {
-                profile
+                profile,
+                character_names
             }
         }
 
         pub fn profile(&self) -> &Profile {
             &self.profile
+        }
+
+        pub fn character_names(&self) -> &[String] {
+            &self.character_names
         }
     }
 
@@ -83,7 +88,7 @@ pub mod game {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Character {
         name: String
     }
@@ -91,6 +96,10 @@ pub mod game {
     impl Character {
         pub fn new(name: String) -> Self {
             Self { name }
+        }
+
+        pub fn name(&self) -> &str {
+            &self.name
         }
     }
 

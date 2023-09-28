@@ -59,10 +59,13 @@ compile_dir() {
     local data_dir target_dir
     data_dir="$1"
     target_dir="$2"
-
-    for dir in $(ls -d $data_dir/*/); do
+    
+    dirs="$(ls -d $data_dir/*/)"
+    for dir in "${dirs[@]}"; do
         local dir_name data_item_dir target_item_dir
+    echo "$dir"
         dir_name="$(basename "$dir")"
+    echo "dir: ${dir_name}"
         data_item_dir="$data_dir/$dir_name"
         target_item_dir="$target_dir/$dir_name"
 
