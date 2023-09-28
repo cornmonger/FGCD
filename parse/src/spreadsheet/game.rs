@@ -1,5 +1,9 @@
 use super::*;
 use super::super::*;
+use anyhow::{Context, Result};
+use fgcd_model::game::Game;
+
+pub mod character;
 
 enum Sheets {
     Profile, 
@@ -10,7 +14,7 @@ enum Sheets {
 }
 
 impl Sheets {
-    const fn name(&self) -> &'static str {
+    const fn title(&self) -> &'static str {
         match *self {
             Sheets::Profile => "Profile",
             Sheets::Characters => "Characters",
@@ -32,7 +36,7 @@ enum ProfileHeadings {
 }
 
 impl ProfileHeadings {
-    pub const fn name(&self) -> &'static str {
+    pub const fn title(&self) -> &'static str {
         match *self {
             ProfileHeadings::Name => "Name",
             ProfileHeadings::Developer => "Developer",
@@ -94,30 +98,30 @@ impl CharacterHeadings {
 const GAME_SPREADSHEET: Spreadsheet = Spreadsheet {
     name: Models::Game.name(),
     sheets: &[
-        Sheet { name: Sheets::Profile.name(), orientation: SheetOrientation::Horizontal, headings: &[
-            SheetHeading { name: ProfileHeadings::Name.name(), rowcol: ProfileHeadings::Name.rowcol() },
-            SheetHeading { name: ProfileHeadings::Developer.name(), rowcol: ProfileHeadings::Developer.rowcol() },
-            SheetHeading { name: ProfileHeadings::Publisher.name(), rowcol: ProfileHeadings::Publisher.rowcol() },
-            SheetHeading { name: ProfileHeadings::ReleaseDate.name(), rowcol: ProfileHeadings::ReleaseDate.rowcol()},
-            SheetHeading { name: ProfileHeadings::Website.name(), rowcol: ProfileHeadings::Website.rowcol() },
-            SheetHeading { name: ProfileHeadings::Wikipedia.name(), rowcol: ProfileHeadings::Wikipedia.rowcol() },
-            SheetHeading { name: ProfileHeadings::Platforms.name(), rowcol: ProfileHeadings::Platforms.rowcol() },
+        Sheet { name: Sheets::Profile.title(), orientation: SheetOrientation::Horizontal, headings: &[
+            SheetHeading { name: ProfileHeadings::Name.title(), rowcol: ProfileHeadings::Name.rowcol() },
+            SheetHeading { name: ProfileHeadings::Developer.title(), rowcol: ProfileHeadings::Developer.rowcol() },
+            SheetHeading { name: ProfileHeadings::Publisher.title(), rowcol: ProfileHeadings::Publisher.rowcol() },
+            SheetHeading { name: ProfileHeadings::ReleaseDate.title(), rowcol: ProfileHeadings::ReleaseDate.rowcol()},
+            SheetHeading { name: ProfileHeadings::Website.title(), rowcol: ProfileHeadings::Website.rowcol() },
+            SheetHeading { name: ProfileHeadings::Wikipedia.title(), rowcol: ProfileHeadings::Wikipedia.rowcol() },
+            SheetHeading { name: ProfileHeadings::Platforms.title(), rowcol: ProfileHeadings::Platforms.rowcol() },
         ] }
     ]
 };
 
 
-const EXT_ODS: &str = ".ods";
 
-pub fn read_game<P>(path: &P) -> model::game::Game
+pub fn read_game<P>(path: &P) -> Result<Game>
 where
     P: ?Sized + AsRef<OsStr>
 {
     let path = PathBuf::from(path);
     let path = if path.is_file() { path } else { PathBuf::from(path).join(String::from(Models::Game.name()) + EXT_ODS) };
-    let workbook = spreadsheet_ods::read_ods(path).unwrap();
+    let workbook = spreadsheet_ods::read_ods(path)?;
 
-    let profile_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Profile.name() ).unwrap();
+    let profile_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Profile.title() )
+        .context("We ain't found Sheet")?;
 
     let profile = model::game::Profile::new(
         profile_sheet.value(ProfileHeadings::Name.row(), 1)
@@ -139,7 +143,9 @@ where
             .collect()
     );
 
-    let characters_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Characters.name() ).unwrap();
+    let characters_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Characters.title() )
+        .context("We ain't found Sheet")?;
+
     let mut character_names: Vec<String> = Vec::new();
 
     for row in CharacterHeadings::Name.row()+1 .. characters_sheet.used_rows() {
@@ -151,19 +157,5 @@ where
         }
     }
 
-    model::game::Game::new(profile, character_names)
+    Ok(Game::new(profile, character_names))
 }
-
-const CHARACTERS: &str = "characters";
-
-/*pub fn read_character_spreadsheet<P>(path: &P, character_name: &str) -> model::game::Character
-where
-    P: ?Sized + AsRef<OsStr>
-{
-    let path = PathBuf::from(path);
-    let path = if filepath.is_file() { path } else { PathBuf::from(path).join(GAME_ODS) };
-
-    let workbook = spreadsheet_ods::read_ods(path).unwrap();
-    let profile_sheet = workbook.iter_sheets().find(|s| s.name() == GameSheets::Profile.name() ).unwrap();
-}*/
-

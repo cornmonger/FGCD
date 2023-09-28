@@ -36,7 +36,7 @@ PLATFORM_DATA_TARGET_DIR = DATA_TARGET_DIR + '/platforms'
 LIBREOFFICE = shutil.which('libreoffice')
 
 def clean():
-    if (path.exists(DATA_TARGET_DIR)):
+    if path.exists(DATA_TARGET_DIR):
         shutil.rmtree(DATA_TARGET_DIR)
 
 def setup():
@@ -49,6 +49,9 @@ def compile():
 def compile_dir(data_dir, target_dir):
     for name in os.listdir(data_dir):
         item_data_dir = path.join(data_dir, name)
+        if not os.path.isdir(item_data_dir):
+            continue
+
         item_target_dir = path.join(target_dir, name)
         os.makedirs(item_target_dir, 0o755)
         os.chdir(item_data_dir)
@@ -56,6 +59,8 @@ def compile_dir(data_dir, target_dir):
             '"{}" --convert-to ods *.fods --outdir "{}"'
                 .format(LIBREOFFICE, item_target_dir),
             shell=True, capture_output=True)
+
+        compile_dir(item_data_dir, item_target_dir)
 
 def main():
     clean()
