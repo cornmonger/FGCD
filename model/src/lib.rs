@@ -1,5 +1,6 @@
 
 pub mod game {
+    use anyhow::{Context,Result};
     use super::input;
     use serde;
     use chrono;
@@ -7,14 +8,16 @@ pub mod game {
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Game {
         profile: Profile,
-        character_names: Vec<String>
+        character_names: Vec<String>,
+        inputs: Vec<input::Input>
     }
 
     impl Game {
-        pub fn new(profile: Profile, character_names: Vec<String>) -> Self {
+        pub fn new(profile: Profile, character_names: Vec<String>, inputs: Vec<input::Input>) -> Self {
             Self {
                 profile,
-                character_names
+                character_names,
+                inputs
             }
         }
 
@@ -25,6 +28,37 @@ pub mod game {
         pub fn character_names(&self) -> &[String] {
             &self.character_names
         }
+
+        pub fn inputs(&self) -> &[input::Input] {
+            &self.inputs
+        }
+
+        pub fn parse_sequence(&self, symbols: &str) -> Result<input::Sequence> {
+            let entries: Vec<input::Entry> = symbols.split(',')
+                .map(|s| s.trim())
+                .map(|s| {
+                    input::Entry::Input(
+                        self.find_input(s)
+                            .context(format!("Unknown input: {s}"))
+                            .unwrap()
+                            .symbol
+                            .clone())
+                }).collect();
+
+            Ok(input::Sequence::new(entries))
+
+        }
+
+        pub fn find_input(&self, symbol: &str) -> Option<&input::Input> {
+            for input in self.inputs() {
+                if symbol == input.symbol.symbol {
+                    return Some(input);
+                }
+            }
+
+            None
+        }
+
     }
 
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -90,12 +124,13 @@ pub mod game {
 
     #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Character {
-        name: String
+        name: String,
+        moves: Vec<Move>
     }
 
     impl Character {
-        pub fn new(name: String) -> Self {
-            Self { name }
+        pub fn new(name: String, moves: Vec<Move>) -> Self {
+            Self { name, moves }
         }
 
         pub fn name(&self) -> &str {
@@ -103,7 +138,7 @@ pub mod game {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct InputBinding {
         name: String,
         input: input::Input
@@ -115,48 +150,70 @@ pub mod game {
         }
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Move {
         name: String,
-        command: input::Command
+        inputs: input::Sequence
     }
 
     impl Move {
-        pub fn new(name: String, command: input::Command) -> Self {
-            Self { name, command }
+        pub fn new(name: String, inputs: input::Sequence) -> Self {
+            Self { name, inputs }
         }
     }
 }
 
 pub mod platform {
+    use serde;
     use super::input::Input;
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Platform {
         input_devices: Vec<InputDevice>
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct InputDevice {
         inputs: Vec<Input>
     }
 }
 
 pub mod input {
-    #[derive(Debug)]
+    use serde;
+    use super::game;
+
+    #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+    pub struct Symbol {
+        pub(crate) symbol: String
+    }
+    
+    impl Symbol {
+        pub fn new(symbol: String) -> Self {
+            Self { symbol }
+        }
+    }
+
+    #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Input {
         name: String,
-        symbol: String 
+        pub(crate) symbol: Symbol
     }
 
-    #[derive(Debug)]
+    impl Input {
+        pub fn new(name: String, symbol: Symbol) -> Self {
+            Self { name, symbol }
+        }
+
+    }
+
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub struct Combination {
-        inputs: Vec<Input>
+        inputs: Vec<Symbol>
     }
 
-    #[derive(Debug)]
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
     pub enum Entry {
-        Input(Input),
+        Input(Symbol),
         Combination(Combination),
         Hold(u64),
         Wait(u64),
@@ -164,11 +221,17 @@ pub mod input {
         Neutral 
     }
 
-    #[derive(Debug)]
-    pub struct Command {
-        name: String,
+    #[derive(Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+    pub struct Sequence {
         entries: Vec<Entry>
     }
+
+    impl Sequence {
+        pub fn new(entries: Vec<Entry>) -> Self {
+            Self { entries }
+        }
+
+    } 
 }
 
 #[cfg(test)]

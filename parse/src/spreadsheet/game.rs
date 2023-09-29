@@ -2,6 +2,7 @@ use super::*;
 use super::super::*;
 use anyhow::{Context, Result};
 use fgcd_model::game::Game;
+use model::input::{Input, Symbol};
 
 pub mod character;
 
@@ -9,8 +10,8 @@ enum Sheets {
     Profile, 
     Characters,
     Inputs,
-    MoveContext,
-    MoveTypes
+    //MoveContext,
+    //MoveTypes
 }
 
 impl Sheets {
@@ -19,8 +20,8 @@ impl Sheets {
             Sheets::Profile => "Profile",
             Sheets::Characters => "Characters",
             Sheets::Inputs => "Inputs",
-            Sheets::MoveContext => "Move Context",
-            Sheets::MoveTypes => "Move Types",
+            //Sheets::MoveContext => "Move Context",
+            //Sheets::MoveTypes => "Move Types",
         }
     }
 }
@@ -69,20 +70,48 @@ impl ProfileHeadings {
     }
 }
 
-enum CharacterHeadings {
+enum CharactersHeadings {
     Name
 }
 
-impl CharacterHeadings {
+impl CharactersHeadings {
     pub const fn title(&self) -> &'static str {
         match *self {
-            CharacterHeadings::Name => "Name",
+            CharactersHeadings::Name => "Name",
         }
     }
 
     pub const fn rowcol(&self) -> RowCol {
         match *self {
-            CharacterHeadings::Name => RowCol(0,0),
+            CharactersHeadings::Name => RowCol(0,0),
+        }
+    }
+
+    pub const fn row(&self) -> u32 {
+        self.rowcol().row()
+    }
+
+    pub const fn column(&self) -> u32 {
+        self.rowcol().column()
+    }
+}
+enum InputsHeadings {
+    Name,
+    Symbol
+}
+
+impl InputsHeadings {
+    pub const fn title(&self) -> &'static str {
+        match *self {
+            InputsHeadings::Name => "Name",
+            InputsHeadings::Symbol => "Symbol",
+        }
+    }
+
+    pub const fn rowcol(&self) -> RowCol {
+        match *self {
+            InputsHeadings::Name =>   RowCol(0,0),
+            InputsHeadings::Symbol => RowCol(0,1),
         }
     }
 
@@ -120,6 +149,7 @@ where
     let path = if path.is_file() { path } else { PathBuf::from(path).join(String::from(Models::Game.name()) + EXT_ODS) };
     let workbook = spreadsheet_ods::read_ods(path)?;
 
+    // PROFILE
     let profile_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Profile.title() )
         .context("We ain't found Sheet")?;
 
@@ -143,13 +173,14 @@ where
             .collect()
     );
 
+    // CHARACTERS
     let characters_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Characters.title() )
         .context("We ain't found Sheet")?;
 
     let mut character_names: Vec<String> = Vec::new();
 
-    for row in CharacterHeadings::Name.row()+1 .. characters_sheet.used_rows() {
-        let value = characters_sheet.value(row, CharacterHeadings::Name.column()).as_str_opt();
+    for row in CharactersHeadings::Name.row()+1 .. characters_sheet.used_rows() {
+        let value = characters_sheet.value(row, CharactersHeadings::Name.column()).as_str_opt();
         if let Some(name) = value {
             character_names.push(name.to_string());
         } else {
@@ -157,5 +188,28 @@ where
         }
     }
 
-    Ok(Game::new(profile, character_names))
+    // INPUTS
+    let inputs_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Inputs.title() )
+        .context("We ain't found Sheet")?;
+
+    let mut inputs: Vec<Input> = Vec::new();
+
+    for row in InputsHeadings::Name.row()+1 .. inputs_sheet.used_rows() {
+        let value = inputs_sheet.value(row, InputsHeadings::Name.column()).as_str_opt();
+        if value.is_none() {
+            break;
+        }
+
+        let name = value.unwrap().to_string();
+        let input = Input::new(
+            name,
+            Symbol::new(inputs_sheet.value(row, InputsHeadings::Symbol.column())
+                .as_str_opt().context("Missing symbol column")?
+                .to_string())
+        );
+        
+        inputs.push(input);
+    }
+
+    Ok(Game::new(profile, character_names, inputs))
 }

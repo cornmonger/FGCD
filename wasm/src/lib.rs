@@ -17,7 +17,7 @@ extern "C" {
 
 pub async fn fetch_bytes(url: &str) -> Result<Vec<u8>, wasm_bindgen::JsValue> {
     let window = web_sys::window().unwrap();
-    let request = web_sys::Request::new_with_str("Game.bin").unwrap();
+    let request = web_sys::Request::new_with_str(url).unwrap();
     let response = wasm_bindgen_futures::JsFuture::from(window.fetch_with_request(&request)).await?;
     assert!(response.is_instance_of::<web_sys::Response>());
     let response: web_sys::Response = response.dyn_into().unwrap();
@@ -33,10 +33,19 @@ pub async fn fetch_bytes(url: &str) -> Result<Vec<u8>, wasm_bindgen::JsValue> {
 }
 
 #[wasm_bindgen]
-pub async fn read_game() -> Result<JsValue, JsValue> {
+pub async fn read_game(game_name: String) -> Result<JsValue, JsValue> {
     set_panic_hook();
 
-    let bytes = fetch_bytes("Game.bin").await?;
+    let bytes = fetch_bytes(&format!("data/games/{game_name}/Game.bin")).await?;
     let game = fgcd_parse::binary::game::read_game_bytes(&bytes).unwrap();
     Ok(serde_wasm_bindgen::to_value(&game)?)
 }
+
+/*#[wasm_bindgen]
+pub async fn read_character(game_name: String, character_name: String) -> Result<JsValue, JsValue> {
+    set_panic_hook();
+
+    let bytes = fetch_bytes("Game.bin").await?;
+    let game = fgcd_parse::binary::game::character::read_character_bytes(&bytes).unwrap();
+    Ok(serde_wasm_bindgen::to_value(&game)?)
+}*/

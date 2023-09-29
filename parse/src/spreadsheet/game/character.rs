@@ -1,4 +1,5 @@
 use anyhow::{Context, Result};
+use model::{game::{Move, Game}, input::{Sequence, Input, Entry}};
 use super::super::*;
 use fgcd_model::game::Character;
 
@@ -21,7 +22,7 @@ enum MoveHeadings {
     Name,
     Type,
     Context,
-    Command
+    Input 
 }
 
 impl MoveHeadings {
@@ -30,16 +31,16 @@ impl MoveHeadings {
             MoveHeadings::Name => "Name",
             MoveHeadings::Type => "Type",
             MoveHeadings::Context => "Context",
-            MoveHeadings::Command => "Command",
+            MoveHeadings::Input => "Input",
         }
     }
 
     pub const fn rowcol(&self) -> RowCol {
         match *self {
             MoveHeadings::Name          => RowCol(0,0),
-            MoveHeadings::Type          => RowCol(1,0),
-            MoveHeadings::Context       => RowCol(2,0),
-            MoveHeadings::Command       => RowCol(3,0),
+            MoveHeadings::Type          => RowCol(0,1),
+            MoveHeadings::Context       => RowCol(0,2),
+            MoveHeadings::Input         => RowCol(0,3),
         }
     }
 
@@ -55,7 +56,7 @@ impl MoveHeadings {
 
 const CHARACTERS: &str = "characters";
 
-pub fn read_character<P>(path: &P, character_name: &str) -> Result<Character>
+pub fn read_character<P>(game: &Game, character_name: &str, path: &P) -> Result<Character>
 where
     P: ?Sized + AsRef<OsStr>
 {
@@ -66,7 +67,25 @@ where
     let moves_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Moves.title() )
         .context("We ain't found Sheet")?;
 
-    let character = Character::new(character_name.to_string());
+    let mut moves: Vec<Move> = Vec::new();
+
+    for row in MoveHeadings::Name.row()+1 .. moves_sheet.used_rows() {
+        let value = moves_sheet.value(row, MoveHeadings::Name.column()).as_str_opt();
+        if value.is_none() {
+            break;
+        }
+
+        let name = value.unwrap().to_string();
+        let symbols = moves_sheet.value(row, MoveHeadings::Input.column())
+                .as_str_opt().context("Missing symbol column")?
+                .to_string();
+
+        let sequence = game.parse_sequence(&symbols)?;
+        moves.push(Move::new(name, sequence));
+    }
+
+
+    let character = Character::new(character_name.to_string(), moves);
     Ok(character)
 }
 
