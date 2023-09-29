@@ -1,5 +1,7 @@
 use anyhow::{Context, Result};
 use model::{game::{Move, Game}, input::{Sequence, Input, Entry}};
+use crate::CHARACTERS;
+
 use super::super::*;
 use fgcd_model::game::Character;
 
@@ -53,10 +55,7 @@ impl MoveHeadings {
     }
 }
 
-
-const CHARACTERS: &str = "characters";
-
-pub fn read_character<P>(game: &Game, character_name: &str, path: &P) -> Result<Character>
+pub fn read_character<P>(character_name: &str, game: &Game, path: &P) -> Result<Character>
 where
     P: ?Sized + AsRef<OsStr>
 {

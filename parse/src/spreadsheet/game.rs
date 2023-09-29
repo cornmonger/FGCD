@@ -203,9 +203,9 @@ where
         let name = value.unwrap().to_string();
         let input = Input::new(
             name,
-            Symbol::new(inputs_sheet.value(row, InputsHeadings::Symbol.column())
+            inputs_sheet.value(row, InputsHeadings::Symbol.column())
                 .as_str_opt().context("Missing symbol column")?
-                .to_string())
+                .to_string()
         );
         
         inputs.push(input);

@@ -30,7 +30,12 @@ mod tests {
         let game_read = fgcd_parse::binary::game::read_game(&mkone_dir);
         println!("Game from binary: {:#?}", game_read);
 
-        let character = fgcd_parse::spreadsheet::game::character::read_character(&game, JOHNNY_CAGE, &mkone_dir).unwrap();
+        let character = fgcd_parse::spreadsheet::game::character::read_character(JOHNNY_CAGE, &game, &mkone_dir).unwrap();
         println!("Character from ODS: {:#?}", character);
+
+        fgcd_parse::binary::game::character::write_character(&character, &game, &mkone_dir).unwrap();
+
+        let character_binary = fgcd_parse::binary::game::character::read_character(JOHNNY_CAGE, &game, &mkone_dir);
+        println!("Character from binary: {:#?}", character_binary);
     }
 }

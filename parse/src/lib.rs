@@ -5,6 +5,8 @@ use fgcd_model as model;
 pub mod spreadsheet;
 pub mod binary;
 
+const CHARACTERS: &'static str = "characters";
+
 pub enum Models {
     Game,
     Character

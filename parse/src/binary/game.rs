@@ -3,8 +3,10 @@ use anyhow::{Context, Result};
 use bincode;
 use fgcd_model::game::Game as Game;
 use super::super::*;
+use super::*;
 
-const EXT_BIN: &str = ".bin";
+pub mod character;
+
 
 pub fn read_game<P>(path: &P) -> Result<Game>
 where
