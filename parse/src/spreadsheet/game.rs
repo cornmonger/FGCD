@@ -146,8 +146,8 @@ where
     P: ?Sized + AsRef<OsStr>
 {
     let path = PathBuf::from(path);
-    let path = if path.is_file() { path } else { PathBuf::from(path).join(String::from(Models::Game.name()) + EXT_ODS) };
-    let workbook = spreadsheet_ods::read_ods(path)?;
+    let path = if path.is_file() { path } else { PathBuf::from(path).join(String::from(Models::Game.name()) + EXT_FODS) };
+    let workbook = spreadsheet_ods::read_fods(path)?;
 
     // PROFILE
     let profile_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Profile.title() )

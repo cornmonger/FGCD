@@ -4,7 +4,7 @@ use fgcd_model as model;
 
 pub mod game;
 
-const EXT_ODS: &str = ".ods";
+const EXT_FODS: &str = ".fods";
 
 struct Spreadsheet {
     name: &'static str,

@@ -60,9 +60,9 @@ where
     P: ?Sized + AsRef<OsStr>
 {
     let path = PathBuf::from(path);
-    let path = if path.is_file() { path } else { PathBuf::from(path).join(CHARACTERS).join(character_name.to_string() + EXT_ODS) };
+    let path = if path.is_file() { path } else { PathBuf::from(path).join(CHARACTERS).join(character_name.to_string() + EXT_FODS) };
 
-    let workbook = spreadsheet_ods::read_ods(path)?;
+    let workbook = spreadsheet_ods::read_fods(path)?;
     let moves_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Moves.title() )
         .context("We ain't found Sheet")?;
 

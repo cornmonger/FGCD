@@ -33,8 +33,6 @@ DATA_TARGET_DIR = TARGET_DIR + '/data'
 GAME_DATA_TARGET_DIR = DATA_TARGET_DIR + '/games'
 PLATFORM_DATA_TARGET_DIR = DATA_TARGET_DIR + '/platforms'
 
-LIBREOFFICE = shutil.which('libreoffice')
-
 def clean():
     if path.exists(DATA_TARGET_DIR):
         shutil.rmtree(DATA_TARGET_DIR)
