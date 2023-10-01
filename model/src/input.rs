@@ -36,25 +36,31 @@ impl Sequence {
         Self { entries }
     }
 
-    pub fn parse_sequence(game: &Game, symbols: &str) -> Result<Sequence> {
+    pub fn from_game(game: &Game, symbols: &str) -> Result<Sequence> {
         let mut entries: Vec<Entry> = Vec::new();
+        //TODO
 
-        for token in symbols.split(',').map(|s| s.trim()) {
+        /*for token in symbols.split(',').map(|s| s.trim()) {
             if (token.contains('+')) {
-                let combo: Vec<Entry> = token.split('+')
+                let result: (Vec<&Entry>, Vec<&Entry>) = token.split('+')
                     .map(|s| s.trim())
                     .map(|s| Self::parse_sequence_token(game, s).unwrap())
-                    .collect();
-                entries.push(Entry::Combination(combo));
+                    .collect::<Vec<Entry>>()
+                    .iter()
+                    .partition(|e| if let Entry::Input(s) = e { true } else { false });
+                let combo = Entry::Combination(result.0.iter()
+                    .filter_map(|e| match e { Entry::Input(s) => Some(s), _ => None })
+                    .collect::<Vec<Symbol>>());
             } else {
                 entries.push(Self::parse_sequence_token(game, token));
+
             }
-        }
+        }*/
 
         Ok(Sequence::new(entries))
     }
 
-    fn parse_sequence_token(game: &Game, token: &str) -> Result<Entry> {
+    fn parse_token(game: &Game, token: &str) -> Result<Entry> {
         let entry = Entry::Input(
             game.find_input(token)
             .context(format!("Unknown input: {token}"))

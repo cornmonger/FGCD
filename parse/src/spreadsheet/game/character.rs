@@ -79,7 +79,7 @@ where
                 .as_str_opt().context("Missing symbol column")?
                 .to_string();
 
-        let sequence = game.parse_sequence(&symbols)?;
+        let sequence = Sequence::from_game(&game, &symbols)?; //TODO
         moves.push(Move::new(name, sequence));
     }
 
