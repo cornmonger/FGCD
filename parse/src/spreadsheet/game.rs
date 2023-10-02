@@ -18,7 +18,7 @@ enum Sheets {
 }
 
 impl Sheets {
-    pub const fn orientation(&self) -> SheetOrientation {
+    const fn orientation(&self) -> SheetOrientation {
         match *self {
             Sheets::Profile =>  SheetOrientation::Horizontal,
             _ => SheetOrientation::Vertical
@@ -138,13 +138,15 @@ impl InputsHeadings {
     }
 }
 
-pub fn read_game<P>(path: &P) -> Result<Game>
+/**
+ * @param path Path to the FCCD data directory or the Game data file
+ */
+pub fn read_game<P>(game_name: &str, path: &P) -> Result<Game>
 where
     P: ?Sized + AsRef<OsStr>
 {
     let path = PathBuf::from(path);
-    let filepath = if path.is_file() { path } else { PathBuf::from(path).join(Models::Game.name().to_string() + EXT_FODS) };
-    print!("{}", filepath.to_str().unwrap());
+    let filepath = if path.is_file() { path } else { game_filepath(game_name, &path, EXT_FODS) };
     let workbook = spreadsheet_ods::read_fods(filepath)?;
 
     // PROFILE
@@ -155,17 +157,17 @@ where
         profile_sheet.value(ProfileHeadings::Name.row(), 1)
             .as_str_opt().unwrap().to_string(),
         profile_sheet.value(ProfileHeadings::Developer.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::Publisher.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::ReleaseDate.row(), 1)
-            .as_date_opt().unwrap(),
+            .as_date_opt().unwrap_or_default(),
         profile_sheet.value(ProfileHeadings::Website.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::Wikipedia.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::Platforms.row(), 1)
-            .as_str_opt().unwrap().to_string()
+            .as_str_opt().unwrap_or_default().to_string()
             .split(',')
             .map(|s| s.trim().to_string())
             .collect()
@@ -217,22 +219,20 @@ pub fn new_game<P>(game_name: &str, data_dir: &P) -> Result<PathBuf>
 where
     P: ?Sized + AsRef<OsStr>
 {
-    let game_data_dir = PathBuf::from(data_dir).join(game_name);
+    let game_data_dir = game_data_dir(game_name, data_dir);
     if !game_data_dir.exists() {
         fs::create_dir(&game_data_dir)?;
     }
 
+    let characters_data_dir = game_data_dir.join(CHARACTERS);
+    if !characters_data_dir.exists() {
+        fs::create_dir(characters_data_dir)?;
+    }
+
     let mut workbook = spreadsheet_ods::WorkBook::new(locale!("en_US"));
 
-    let mut header_vertical_style = spreadsheet_ods::CellStyle::new_empty();
-    header_vertical_style.set_font_bold();
-    header_vertical_style.set_text_align(spreadsheet_ods::style::units::TextAlign::Center);
-    let header_vertical_style = workbook.add_cellstyle(header_vertical_style);
 
-    let mut header_horizontal_style = spreadsheet_ods::CellStyle::new_empty();
-    header_horizontal_style.set_font_bold();
-    header_horizontal_style.set_text_align(spreadsheet_ods::style::units::TextAlign::Left);
-    let header_horizontal_style = workbook.add_cellstyle(header_horizontal_style);
+    let (header_vertical_style, header_horizontal_style) = create_styles(&mut workbook);
 
     let style_for = |orientation: SheetOrientation| -> &spreadsheet_ods::CellStyleRef {
         match orientation {
@@ -246,6 +246,8 @@ where
     for heading in ProfileHeadings::iter() {
         profile_sheet.set_styled_value(heading.row(), heading.column(), heading.title(), style_for(Sheets::Profile.orientation()));
     }
+
+    profile_sheet.set_value(ProfileHeadings::Name.row(), ProfileHeadings::Name.column()+1, game_name);
 
     // CHARACTERS
     let mut characters_sheet = spreadsheet_ods::Sheet::new(Sheets::Characters.title());
@@ -265,6 +267,7 @@ where
 
     let game_filepath = game_data_dir.join(Models::Game.name().to_string() + EXT_FODS);
     spreadsheet_ods::write_fods(&mut workbook, &game_filepath)?;
+
     Ok(game_filepath)
 }
 

@@ -7,24 +7,30 @@ use crate::CHARACTERS;
 use super::super::*;
 use super::*;
 
-pub fn read_character<P>(character_name: &str, _game: &Game, path: &P) -> Result<Character>
+/**
+ * @param path Path to the FGCD data directory or the Game data file
+ */
+pub fn read_character<P>(character_name: &str, game: &Game, path: &P) -> Result<Character>
 where
     P: ?Sized + AsRef<OsStr>
 {
     let path = PathBuf::from(path);
-    let path = if path.is_file() { path } else { PathBuf::from(path).join(CHARACTERS).join(character_name.to_string() + EXT_BIN) };
+    let path = if path.is_file() { path } else { character_filepath(character_name, game.name(), &path, EXT_BIN) };
  
     let bufreader = BufReader::new(File::open(path)?);
     let character = bincode::deserialize_from(bufreader)?;
     Ok(character)
 }
 
-pub fn write_character<P>(character: &Character, _game: &Game, path: &P) -> Result<()>
+/**
+ * @param path Path to the FGCD data directory or the Game data file
+ */
+pub fn write_character<P>(character: &Character, game: &Game, path: &P) -> Result<()>
 where
     P: ?Sized + AsRef<OsStr>
 {
     let path = PathBuf::from(path);
-    let path = if path.is_file() { path } else { PathBuf::from(path).join(CHARACTERS).join(character.name().to_string() + EXT_BIN) };
+    let path = if path.is_file() { path } else { character_filepath(character.name(), game.name(), &path, EXT_BIN) };
  
     let mut bufwriter = BufWriter::new(File::create(path)?);
     bincode::serialize_into(&mut bufwriter, &character)?;

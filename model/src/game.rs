@@ -21,6 +21,10 @@ impl Game {
         }
     }
 
+    pub fn name(&self) -> &str {
+        &self.profile.name
+    }
+
     pub fn profile(&self) -> &Profile {
         &self.profile
     }
