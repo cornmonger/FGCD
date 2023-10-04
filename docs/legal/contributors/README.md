@@ -5,7 +5,7 @@ Contributors
 
 All community contributions to this project must be made under a **Copyright Assignment Agreement** (CAA) between the contributor and Asmov LLC. The agreement effectively transfers ownership of the contribution to Asmov.
 
-Copyright transfers allow the project to dual-license the project and its components where necessary. This is especially useful for distribution channels such as the Apple App Store, which is not compatible with the GPL.
+Copyright transfers allow us to dual-license the project and its components where necessary. This is especially useful for distribution channels such as the Apple App Store, which is not compatible with the GPL.
 
 The CAA is based off of the Harmony agreement template created by Canonical (Ubuntu). There are two copies which must be filled out and signed: "Formal" and "GPG". The "Formal" form will be kept privately by Asmov. The "GPG" form will be public and published to the project repository.
 
