@@ -1,8 +1,11 @@
+use std::fs;
 use super::*;
 use super::super::*;
 use anyhow::{Context, Result};
 use fgcd_model::game::Game;
 use model::input::{Input, Symbol};
+use icu_locid::locale;
+use strum::{IntoEnumIterator};
 
 pub mod character;
 
@@ -15,6 +18,13 @@ enum Sheets {
 }
 
 impl Sheets {
+    const fn orientation(&self) -> SheetOrientation {
+        match *self {
+            Sheets::Profile =>  SheetOrientation::Horizontal,
+            _ => SheetOrientation::Vertical
+        }
+    }
+
     const fn title(&self) -> &'static str {
         match *self {
             Sheets::Profile => "Profile",
@@ -26,6 +36,7 @@ impl Sheets {
     }
 }
 
+#[derive(Debug, PartialEq, strum::EnumIter)]
 enum ProfileHeadings {
     Name,
     Developer,
@@ -70,6 +81,7 @@ impl ProfileHeadings {
     }
 }
 
+#[derive(Debug, PartialEq, strum::EnumIter)]
 enum CharactersHeadings {
     Name
 }
@@ -95,6 +107,8 @@ impl CharactersHeadings {
         self.rowcol().column()
     }
 }
+
+#[derive(Debug, PartialEq, strum::EnumIter)]
 enum InputsHeadings {
     Name,
     Symbol
@@ -124,30 +138,16 @@ impl InputsHeadings {
     }
 }
 
-const GAME_SPREADSHEET: Spreadsheet = Spreadsheet {
-    name: Models::Game.name(),
-    sheets: &[
-        Sheet { name: Sheets::Profile.title(), orientation: SheetOrientation::Horizontal, headings: &[
-            SheetHeading { name: ProfileHeadings::Name.title(), rowcol: ProfileHeadings::Name.rowcol() },
-            SheetHeading { name: ProfileHeadings::Developer.title(), rowcol: ProfileHeadings::Developer.rowcol() },
-            SheetHeading { name: ProfileHeadings::Publisher.title(), rowcol: ProfileHeadings::Publisher.rowcol() },
-            SheetHeading { name: ProfileHeadings::ReleaseDate.title(), rowcol: ProfileHeadings::ReleaseDate.rowcol()},
-            SheetHeading { name: ProfileHeadings::Website.title(), rowcol: ProfileHeadings::Website.rowcol() },
-            SheetHeading { name: ProfileHeadings::Wikipedia.title(), rowcol: ProfileHeadings::Wikipedia.rowcol() },
-            SheetHeading { name: ProfileHeadings::Platforms.title(), rowcol: ProfileHeadings::Platforms.rowcol() },
-        ] }
-    ]
-};
-
-
-
-pub fn read_game<P>(path: &P) -> Result<Game>
+/**
+ * @param path Path to the FCCD data directory or the Game data file
+ */
+pub fn read_game<P>(game_name: &str, path: &P) -> Result<Game>
 where
     P: ?Sized + AsRef<OsStr>
 {
     let path = PathBuf::from(path);
-    let path = if path.is_file() { path } else { PathBuf::from(path).join(String::from(Models::Game.name()) + EXT_ODS) };
-    let workbook = spreadsheet_ods::read_ods(path)?;
+    let filepath = if path.is_file() { path } else { game_filepath(game_name, &path, EXT_FODS) };
+    let workbook = spreadsheet_ods::read_fods(filepath)?;
 
     // PROFILE
     let profile_sheet = workbook.iter_sheets().find(|s| s.name() == Sheets::Profile.title() )
@@ -157,17 +157,17 @@ where
         profile_sheet.value(ProfileHeadings::Name.row(), 1)
             .as_str_opt().unwrap().to_string(),
         profile_sheet.value(ProfileHeadings::Developer.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::Publisher.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::ReleaseDate.row(), 1)
-            .as_date_opt().unwrap(),
+            .as_date_opt().unwrap_or_default(),
         profile_sheet.value(ProfileHeadings::Website.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::Wikipedia.row(), 1)
-            .as_str_opt().unwrap().to_string(),
+            .as_str_opt().unwrap_or_default().to_string(),
         profile_sheet.value(ProfileHeadings::Platforms.row(), 1)
-            .as_str_opt().unwrap().to_string()
+            .as_str_opt().unwrap_or_default().to_string()
             .split(',')
             .map(|s| s.trim().to_string())
             .collect()
@@ -213,3 +213,62 @@ where
 
     Ok(Game::new(profile, character_names, inputs))
 }
+
+
+pub fn new_game<P>(game_name: &str, data_dir: &P) -> Result<PathBuf>
+where
+    P: ?Sized + AsRef<OsStr>
+{
+    let game_data_dir = game_data_dir(game_name, data_dir);
+    if !game_data_dir.exists() {
+        fs::create_dir(&game_data_dir)?;
+    }
+
+    let characters_data_dir = game_data_dir.join(CHARACTERS);
+    if !characters_data_dir.exists() {
+        fs::create_dir(characters_data_dir)?;
+    }
+
+    let mut workbook = spreadsheet_ods::WorkBook::new(locale!("en_US"));
+
+
+    let (header_vertical_style, header_horizontal_style) = create_styles(&mut workbook);
+
+    let style_for = |orientation: SheetOrientation| -> &spreadsheet_ods::CellStyleRef {
+        match orientation {
+            SheetOrientation::Vertical => &header_vertical_style,
+            SheetOrientation::Horizontal => &header_horizontal_style
+        }
+    };
+
+    // PROFILE
+    let mut profile_sheet = spreadsheet_ods::Sheet::new(Sheets::Profile.title());
+    for heading in ProfileHeadings::iter() {
+        profile_sheet.set_styled_value(heading.row(), heading.column(), heading.title(), style_for(Sheets::Profile.orientation()));
+    }
+
+    profile_sheet.set_value(ProfileHeadings::Name.row(), ProfileHeadings::Name.column()+1, game_name);
+
+    // CHARACTERS
+    let mut characters_sheet = spreadsheet_ods::Sheet::new(Sheets::Characters.title());
+    for heading in CharactersHeadings::iter() {
+        characters_sheet.set_styled_value(heading.row(), heading.column(), heading.title(), style_for(Sheets::Characters.orientation()));
+    }
+
+    // INPUTS
+    let mut inputs_sheet = spreadsheet_ods::Sheet::new(Sheets::Inputs.title());
+    for heading in InputsHeadings::iter() {
+        inputs_sheet.set_styled_value(heading.row(), heading.column(), heading.title(), style_for(Sheets::Inputs.orientation()));
+    }
+
+    workbook.push_sheet(profile_sheet);
+    workbook.push_sheet(characters_sheet);
+    workbook.push_sheet(inputs_sheet);
+
+    let game_filepath = game_data_dir.join(Models::Game.name().to_string() + EXT_FODS);
+    spreadsheet_ods::write_fods(&mut workbook, &game_filepath)?;
+
+    Ok(game_filepath)
+}
+
+

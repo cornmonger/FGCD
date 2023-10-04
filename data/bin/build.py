@@ -20,7 +20,7 @@
 import os;
 import os.path as path;
 import shutil;
-import subprocess;
+import glob;
 
 PROJECT_DIR = path.realpath(path.dirname(__file__) + '/..')
 
@@ -32,8 +32,6 @@ DATA_TARGET_DIR = TARGET_DIR + '/data'
 
 GAME_DATA_TARGET_DIR = DATA_TARGET_DIR + '/games'
 PLATFORM_DATA_TARGET_DIR = DATA_TARGET_DIR + '/platforms'
-
-LIBREOFFICE = shutil.which('libreoffice')
 
 def clean():
     if path.exists(DATA_TARGET_DIR):
@@ -54,11 +52,10 @@ def compile_dir(data_dir, target_dir):
 
         item_target_dir = path.join(target_dir, name)
         os.makedirs(item_target_dir, 0o755)
+        
         os.chdir(item_data_dir)
-        subprocess.run(
-            '"{}" --convert-to ods *.fods --outdir "{}"'
-                .format(LIBREOFFICE, item_target_dir),
-            shell=True, capture_output=True)
+        for file in glob.glob(r'*.fods'):
+            shutil.copy(file, item_target_dir)
 
         compile_dir(item_data_dir, item_target_dir)
 
